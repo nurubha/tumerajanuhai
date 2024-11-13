@@ -1,0 +1,47 @@
+# example of using a pre-trained model as a classifier
+from tensorflow.keras.preprocessing.image import load_img
+from tensorflow.keras.preprocessing.image import img_to_array
+from keras.applications.vgg16 import preprocess_input
+from keras.applications.vgg16 import decode_predictions
+from keras.applications.vgg16 import VGG16
+import requests
+from io import BytesIO
+import numpy as np
+import matplotlib.pyplot as plt
+
+# load an image from file
+image_url = "https://d1jyxxz9imt9yb.cloudfront.net/article/10763/meta_image/regular/3_reduced.jpg"  # Example URL
+
+# Define a custom User-Agent header
+headers = {
+    'User-Agent': 'MyImageDownloaderScript'  # Replace with a descriptive name
+}
+
+# Fetch the image content, including the custom header
+response = requests.get(image_url, stream=True, headers=headers)
+response.raise_for_status()  # Raise an exception for bad responses (like 403)
+
+# Verify content type
+content_type = response.headers.get('content-type')
+if 'image' not in content_type:
+    raise ValueError(f"Invalid content type: {content_type}. Expected an image.")
+
+image = load_img(BytesIO(response.content), target_size=(224, 224)) # Load image from content
+
+
+# convert the image pixels to a numpy array
+image = img_to_array(image)
+# reshape data for the model
+image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
+# prepare the image for the VGG model
+image = preprocess_input(image)
+# load the model
+model = VGG16()
+# predict the probability across all output classes
+yhat = model.predict(image)
+# convert the probabilities to class labels
+label = decode_predictions(yhat)
+# retrieve the most likely result, e.g. highest probability
+label = label[0][0]
+# print the classification
+print('%s (%.2f%%)' % (label[1], label[2]*100))
